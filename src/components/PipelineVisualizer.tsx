@@ -24,8 +24,8 @@ export const PipelineVisualizer: React.FC<PipelineVisualizerProps> = ({ isAnalyz
     },
     {
       id: 3,
-      title: 'Gemini 1M+ Analysis',
-      desc: '3s hook & retention index',
+      title: 'AI Context Analysis',
+      desc: '3s hook & virality scoring',
       icon: Cpu,
     },
     {
@@ -37,13 +37,13 @@ export const PipelineVisualizer: React.FC<PipelineVisualizerProps> = ({ isAnalyz
     {
       id: 5,
       title: 'Kinetic Subtitles',
-      desc: 'Animated karaoke burn',
+      desc: 'Animated karaoke typography',
       icon: Sparkles,
     },
   ];
 
   return (
-    <div className="glass-box p-5 sm:p-6 rounded-3xl border border-purple-500/40 bg-purple-950/30 mb-8 relative overflow-hidden">
+    <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-purple-500/40 bg-purple-950/30 mb-8 relative overflow-hidden">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-3 h-3 rounded-full bg-purple-400 animate-ping" />
         <h3 className="text-base sm:text-lg font-extrabold text-white">
@@ -51,7 +51,7 @@ export const PipelineVisualizer: React.FC<PipelineVisualizerProps> = ({ isAnalyz
         </h3>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {steps.map((s, idx) => {
           const isDone = step > s.id;
           const isCurrent = step === s.id;
@@ -62,10 +62,10 @@ export const PipelineVisualizer: React.FC<PipelineVisualizerProps> = ({ isAnalyz
               key={s.id}
               className={`p-3.5 rounded-2xl border transition-all ${
                 isCurrent
-                  ? 'bg-purple-600/30 border-purple-500 shadow-lg shadow-purple-500/30 scale-102'
+                  ? 'bg-purple-600/30 border-purple-500 shadow-xl shadow-purple-500/25 scale-[1.02]'
                   : isDone
                   ? 'bg-emerald-950/30 border-emerald-500/40'
-                  : 'bg-white/[0.02] border-white/5 opacity-50'
+                  : 'bg-white/[0.02] border-white/5 opacity-40'
               }`}
             >
               <div className="flex items-center justify-between mb-2">

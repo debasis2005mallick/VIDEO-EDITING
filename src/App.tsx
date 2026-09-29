@@ -3,14 +3,39 @@ import { Navbar } from './components/Navbar';
 import { UploadSection } from './components/UploadSection';
 import { ClipsList, type ViralClip } from './components/ClipsList';
 import { ReelStudio } from './components/ReelStudio';
-import { ApiKeyModal } from './components/ApiKeyModal';
+import { AiSettingsModal, type AiConfig, type AiProvider } from './components/AiSettingsModal';
 import { PipelineVisualizer } from './components/PipelineVisualizer';
 import { SAMPLE_PODCASTS, type WordTimestamp } from './data/mockPodcasts';
 import { Sparkles, Cpu, Layers, HardDrive, ShieldCheck } from 'lucide-react';
 
+const DEFAULT_AI_CONFIG: AiConfig = {
+  provider: 'gemini',
+  model: 'gemini-1.5-flash',
+  keys: {
+    gemini: '',
+    openai: '',
+    claude: '',
+    groq: '',
+  },
+};
+
 export function App() {
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('gemini_api_key') || '');
-  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [aiConfig, setAiConfig] = useState<AiConfig>(() => {
+    try {
+      const saved = localStorage.getItem('reelcraft_ai_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...DEFAULT_AI_CONFIG,
+          ...parsed,
+          keys: { ...DEFAULT_AI_CONFIG.keys, ...(parsed.keys || {}) },
+        };
+      }
+    } catch {}
+    return DEFAULT_AI_CONFIG;
+  });
+
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [serverStatus, setServerStatus] = useState(false);
 
   // Active Video State
@@ -26,7 +51,6 @@ export function App() {
   const [clips, setClips] = useState<ViralClip[]>([]);
   const [selectedClip, setSelectedClip] = useState<ViralClip | null>(null);
 
-  // Check backend server health
   useEffect(() => {
     fetch('/api/health')
       .then((res) => res.json())
@@ -36,9 +60,9 @@ export function App() {
       .catch(() => setServerStatus(false));
   }, []);
 
-  const handleSaveApiKey = (key: string) => {
-    setApiKey(key);
-    localStorage.setItem('gemini_api_key', key);
+  const handleSaveAiConfig = (newConfig: AiConfig) => {
+    setAiConfig(newConfig);
+    localStorage.setItem('reelcraft_ai_config', JSON.stringify(newConfig));
   };
 
   const handleVideoSelected = (videoData: {
@@ -60,18 +84,31 @@ export function App() {
     setSelectedClip(null);
   };
 
+  const getProviderDisplayName = (p: AiProvider) => {
+    switch (p) {
+      case 'gemini':
+        return 'Google Gemini';
+      case 'openai':
+        return 'OpenAI GPT-4o';
+      case 'claude':
+        return 'Claude 3.5 Sonnet';
+      case 'groq':
+        return 'Groq / DeepSeek';
+      default:
+        return 'AI Engine';
+    }
+  };
+
   const handleStartAnalysis = async (targetLength: string, focusTopic: string) => {
     setIsAnalyzing(true);
     setAnalysisStep(1);
 
     const stepInterval = setInterval(() => {
-      setAnalysisStep((prev) => {
-        if (prev < 5) return prev + 1;
-        return prev;
-      });
-    }, 700);
+      setAnalysisStep((prev) => (prev < 5 ? prev + 1 : prev));
+    }, 650);
 
     try {
+      const activeKey = aiConfig.keys[aiConfig.provider];
       const response = await fetch('/api/analyze-transcript', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,7 +118,9 @@ export function App() {
           videoDuration,
           targetLength,
           focusTopic,
-          userApiKey: apiKey,
+          provider: aiConfig.provider,
+          model: aiConfig.model,
+          apiKey: activeKey,
         }),
       });
 
@@ -89,7 +128,7 @@ export function App() {
       clearInterval(stepInterval);
       setAnalysisStep(5);
 
-      if (data.success && data.data.clips) {
+      if (data.success && data.data && data.data.clips) {
         const generatedClips: ViralClip[] = data.data.clips;
         setClips(generatedClips);
         if (generatedClips.length > 0) {
@@ -97,7 +136,7 @@ export function App() {
         }
       }
     } catch (err) {
-      console.error('Error during analysis:', err);
+      console.error('Analysis error:', err);
       setClips([
         {
           id: 'clip-1',
@@ -142,7 +181,7 @@ export function App() {
     } finally {
       setTimeout(() => {
         setIsAnalyzing(false);
-      }, 500);
+      }, 400);
     }
   };
 
@@ -165,23 +204,24 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#090b10] text-slate-100 flex flex-col font-['Outfit'] selection:bg-purple-600 selection:text-white">
-      {/* Top Navbar */}
+    <div className="app-container">
+      {/* Navigation */}
       <Navbar
-        apiKey={apiKey}
-        onOpenKeyModal={() => setIsKeyModalOpen(true)}
+        aiConfig={aiConfig}
+        onOpenAiModal={() => setIsAiModalOpen(true)}
         serverStatus={serverStatus}
       />
 
-      {/* Main Studio Center Layout */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Upload & Intake Hero Card */}
+      {/* Main Studio Container */}
+      <main className="studio-main">
+        {/* Upload Hero Card */}
         <UploadSection
           onVideoSelected={handleVideoSelected}
           onStartAnalysis={handleStartAnalysis}
           isAnalyzing={isAnalyzing}
           selectedVideoName={videoTitle}
           videoDuration={videoDuration}
+          aiProviderName={getProviderDisplayName(aiConfig.provider)}
         />
 
         {/* Multi-stage Progress Visualizer */}
@@ -207,7 +247,7 @@ export function App() {
         )}
 
         {/* Architecture Blueprint Card */}
-        <div className="glass-box p-5 sm:p-8 rounded-3xl border border-white/10 mt-8 mb-8 bg-gradient-to-br from-[#0f1322] to-[#090b10]">
+        <div className="glass-panel mt-8 mb-8 bg-gradient-to-br from-[#0f1424] to-[#06070a]">
           <div className="flex items-center gap-2 mb-4">
             <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
             <h3 className="text-base sm:text-lg font-extrabold text-white">
@@ -229,10 +269,10 @@ export function App() {
             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
               <div className="flex items-center gap-2 text-cyan-400 font-bold mb-2">
                 <Cpu className="w-4 h-4" />
-                <span>2. 1M+ Token Gemini Analysis</span>
+                <span>2. Multi-AI Context Analysis</span>
               </div>
               <p className="leading-relaxed">
-                A 4-hour podcast (~40,000 words) fits effortlessly inside Gemini 2.0 / 1.5 Flash's 1,000,000 token context window, analyzing hooks and retention in a single pass.
+                Full 4-hour podcasts (~40,000 words) are processed with Google Gemini 2.0 / 1.5, OpenAI GPT-4o, Claude 3.5, or DeepSeek R1 to extract viral retention hooks.
               </p>
             </div>
 
@@ -250,16 +290,16 @@ export function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500 bg-[#090b10]/90">
-        <p>ReelCraft AI • Turn 3–4 Hour Podcasts into 30–90s Viral Reels • Built for 2GB–10GB+ Media</p>
+      <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500 bg-[#06070a]">
+        <p>ReelCraft AI • Turn 3–4 Hour Podcasts into 30–90s Viral Reels • Multi-AI Powered Studio</p>
       </footer>
 
-      {/* API Key Modal */}
-      <ApiKeyModal
-        isOpen={isKeyModalOpen}
-        onClose={() => setIsKeyModalOpen(false)}
-        apiKey={apiKey}
-        onSaveKey={handleSaveApiKey}
+      {/* Multi-AI Provider Settings Modal */}
+      <AiSettingsModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        config={aiConfig}
+        onSaveConfig={handleSaveAiConfig}
       />
     </div>
   );

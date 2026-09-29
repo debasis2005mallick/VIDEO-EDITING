@@ -47,6 +47,9 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     ffmpegReady: true,
     hasGeminiKey: !!process.env.GEMINI_API_KEY,
+    hasOpenAiKey: !!process.env.OPENAI_API_KEY,
+    hasClaudeKey: !!process.env.ANTHROPIC_API_KEY,
+    hasGroqKey: !!process.env.GROQ_API_KEY,
     timestamp: new Date().toISOString(),
   });
 });
@@ -110,19 +113,21 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   fs.writeFileSync(filePath, assContent, 'utf-8');
 }
 
-// 1. AI Analysis of Transcript with Gemini
+// 1. Multi-AI Provider Transcript Analysis (Gemini / OpenAI / Claude / Groq)
 app.post('/api/analyze-transcript', async (req, res) => {
   try {
-    const { transcript, wordTimestamps, videoDuration, targetLength = '60', userApiKey } = req.body;
-    
-    const apiKey = userApiKey || process.env.GEMINI_API_KEY;
-    
-    if (apiKey) {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const {
+      transcript,
+      wordTimestamps,
+      videoDuration,
+      targetLength = '60',
+      provider = 'gemini',
+      model = 'gemini-1.5-flash',
+      apiKey,
+    } = req.body;
 
-      const prompt = `You are a world-class viral video editor & podcast producer (like the lead editors for Joe Rogan, MrBeast, Huberman Lab).
-Your mission is to analyze the following podcast/video transcript and identify the TOP 3 to 6 viral, highly engaging 30-90 second reel candidates.
+    const systemPrompt = `You are a world-class viral video editor & podcast producer (like the lead editors for Joe Rogan, MrBeast, Huberman Lab).
+Your mission is to analyze the podcast/video transcript and identify the TOP 3 to 6 viral, highly engaging 30-90 second reel candidates.
 
 Target duration per clip: ${targetLength === 'auto' ? 'Between 30 to 80 seconds' : `Around ${targetLength} seconds (±15s)`}.
 Total Video Duration: ${videoDuration ? `${videoDuration} seconds` : 'Full length'}.
@@ -130,11 +135,11 @@ Total Video Duration: ${videoDuration ? `${videoDuration} seconds` : 'Full lengt
 Transcript with timestamps:
 ${transcript}
 
-Rules for selecting clips:
-1. Must have an irresistible HOOK in the first 3-5 seconds (curiosity, controversy, high-stakes question, or shocking fact).
+Rules:
+1. Must have an irresistible HOOK in the first 3-5 seconds.
 2. Must contain high-value insight, hilarious punchline, or deep emotional storytelling.
-3. Must be self-contained: makes complete sense without needing context before or after.
-4. Provide exact start_time (in seconds) and end_time (in seconds).
+3. Must be self-contained: makes complete sense on its own.
+4. Provide exact start_time and end_time in seconds.
 5. Give a Virality Score between 1 and 100 with actionable reasoning.
 
 Return ONLY a valid JSON object matching this schema:
@@ -144,11 +149,11 @@ Return ONLY a valid JSON object matching this schema:
       "id": "clip-1",
       "title": "Catchy 4-7 Word Title",
       "hookText": "The opening sentence that grips viewers",
-      "startTime": 142.5,
-      "endTime": 205.0,
-      "duration": 62.5,
+      "startTime": 14.5,
+      "endTime": 72.0,
+      "duration": 57.5,
       "viralScore": 96,
-      "reasoning": "Starts with a counter-intuitive statement on sleep, delivers high practical value with zero fluff.",
+      "reasoning": "Starts with an explosive pattern-interrupt, delivers high practical value with zero fluff.",
       "category": "Mindset | Business | Story | Controversial | Tech",
       "suggestedCaption": "Ready-to-post caption with #hashtags",
       "keyQuote": "Most people overestimate what they can do in a day."
@@ -156,18 +161,100 @@ Return ONLY a valid JSON object matching this schema:
   ]
 }`;
 
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json' },
-      });
+    // Provider 1: Google Gemini
+    if (provider === 'gemini') {
+      const activeKey = apiKey || process.env.GEMINI_API_KEY;
+      if (activeKey) {
+        const genAI = new GoogleGenerativeAI(activeKey);
+        const geminiModel = genAI.getGenerativeModel({ model: model || 'gemini-1.5-flash' });
 
-      const responseText = result.response.text();
-      const parsedData = JSON.parse(responseText);
-      return res.json({ success: true, data: parsedData });
+        const result = await geminiModel.generateContent({
+          contents: [{ role: 'user', parts: [{ text: systemPrompt }] }],
+          generationConfig: { responseMimeType: 'application/json' },
+        });
+
+        const parsedData = JSON.parse(result.response.text());
+        return res.json({ success: true, provider: 'gemini', data: parsedData });
+      }
     }
 
-    // Fallback: Smart heuristic simulation if no Gemini API key is configured yet
-    console.log('[AI] Running intelligent heuristic analysis fallback (No Gemini Key provided)');
+    // Provider 2: OpenAI (GPT-4o, GPT-4o-mini)
+    if (provider === 'openai') {
+      const activeKey = apiKey || process.env.OPENAI_API_KEY;
+      if (activeKey) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeKey}`,
+          },
+          body: JSON.stringify({
+            model: model || 'gpt-4o',
+            messages: [{ role: 'user', content: systemPrompt }],
+            response_format: { type: 'json_object' },
+          }),
+        });
+        const data: any = await response.json();
+        if (data.choices && data.choices[0]) {
+          const parsedData = JSON.parse(data.choices[0].message.content);
+          return res.json({ success: true, provider: 'openai', data: parsedData });
+        }
+      }
+    }
+
+    // Provider 3: Anthropic Claude
+    if (provider === 'claude') {
+      const activeKey = apiKey || process.env.ANTHROPIC_API_KEY;
+      if (activeKey) {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': activeKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: model || 'claude-3-5-sonnet-20241022',
+            max_tokens: 4000,
+            messages: [{ role: 'user', content: `${systemPrompt}\n\nRespond with valid JSON only.` }],
+          }),
+        });
+        const data: any = await response.json();
+        if (data.content && data.content[0]) {
+          const text = data.content[0].text;
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          const parsedData = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+          return res.json({ success: true, provider: 'claude', data: parsedData });
+        }
+      }
+    }
+
+    // Provider 4: Groq (DeepSeek / Llama)
+    if (provider === 'groq') {
+      const activeKey = apiKey || process.env.GROQ_API_KEY;
+      if (activeKey) {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeKey}`,
+          },
+          body: JSON.stringify({
+            model: model || 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: systemPrompt }],
+            response_format: { type: 'json_object' },
+          }),
+        });
+        const data: any = await response.json();
+        if (data.choices && data.choices[0]) {
+          const parsedData = JSON.parse(data.choices[0].message.content);
+          return res.json({ success: true, provider: 'groq', data: parsedData });
+        }
+      }
+    }
+
+    // Fallback: Intelligent heuristic engine if no API key is provided
+    console.log(`[AI] Running intelligent heuristic fallback for provider: ${provider}`);
     const simulatedClips = generateHeuristicClips(transcript, videoDuration || 300);
     return res.json({ success: true, data: { clips: simulatedClips }, isFallback: true });
   } catch (error: any) {
@@ -176,47 +263,45 @@ Return ONLY a valid JSON object matching this schema:
   }
 });
 
-// Heuristic fallback clip generator
 function generateHeuristicClips(text: string, duration: number) {
-  const baseDuration = Math.min(duration || 300, 300);
   return [
     {
       id: 'clip-1',
       title: 'The Uncomfortable Truth Nobody Admits',
       hookText: 'Most people spend 90% of their energy solving the completely wrong problem...',
-      startTime: 18.0,
-      endTime: 74.5,
-      duration: 56.5,
+      startTime: 5.0,
+      endTime: 28.0,
+      duration: 23.0,
       viralScore: 97,
-      reasoning: 'Explosive hook with immediate pattern-interrupt. High retention throughout the 56-second breakdown.',
+      reasoning: 'Explosive hook with immediate pattern-interrupt. High retention throughout.',
       category: 'Mindset & Growth',
-      suggestedCaption: 'This one mindset shift changes everything you build in 2026. 🚀 #podcast #mindset #entrepreneur #success',
+      suggestedCaption: 'This one mindset shift changes everything you build in 2026. 🚀 #podcast #mindset #entrepreneur',
       keyQuote: 'Stop optimizing steps that should not exist in the first place.',
     },
     {
       id: 'clip-2',
       title: 'Why 99% Of People Fail At Long-Term Habits',
       hookText: 'Willpower is a finite battery. If your system depends on motivation, you have already lost.',
-      startTime: 112.0,
-      endTime: 168.0,
-      duration: 56.0,
-      viralScore: 92,
-      reasoning: 'Clear visual analogy with concrete psychological framework. Highly shareable on TikTok & Reels.',
-      category: 'Psychology',
-      suggestedCaption: 'Forget motivation. Build friction-free environments instead. 🧠 #productivity #habits #biohacking',
-      keyQuote: 'You do not rise to the level of your goals, you fall to the level of your systems.',
+      startTime: 42.0,
+      endTime: 52.2,
+      duration: 10.2,
+      viralScore: 94,
+      reasoning: 'Clear visual analogy with concrete psychological framework. Highly shareable.',
+      category: 'Neuroscience',
+      suggestedCaption: 'Forget motivation. Build friction-free environments instead. 🧠 #productivity #habits',
+      keyQuote: 'Attach dopamine to the effort and the friction, not the reward.',
     },
     {
       id: 'clip-3',
       title: 'The Billion-Dollar AI Advantage in 2026',
-      hookText: 'If you are still doing manual video cuts in 2026, you are operating at 1/100th the speed of your competitors.',
-      startTime: 204.0,
-      endTime: 258.0,
-      duration: 54.0,
-      viralScore: 89,
+      hookText: 'If you are still doing manual video cuts in 2026, you are operating at 1/100th the speed.',
+      startTime: 10.0,
+      endTime: 45.0,
+      duration: 35.0,
+      viralScore: 91,
       reasoning: 'High-urgency tech trend discussion with practical business leverage insights.',
       category: 'Tech & AI',
-      suggestedCaption: 'How AI video pipelines are replacing entire editing studios. ⚡ #ai #videocreator #futureofwork',
+      suggestedCaption: 'How AI video pipelines are replacing entire editing studios. ⚡ #ai #videocreator',
       keyQuote: 'Automation is not about saving time—it is about scaling your creative surface area.',
     },
   ];

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Play, Pause, RotateCcw, Download, Sparkles, Sliders, Type, Layout,
-  Layers, Volume2, VolumeX, Heart, MessageCircle, Bookmark, Share2,
-  Check, Copy, Scissors, ArrowDown
+  Volume2, VolumeX, Heart, MessageCircle, Bookmark, Share2,
+  Check, Copy, Scissors
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { ViralClip } from './ClipsList';
@@ -31,7 +31,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
   const [layoutMode, setLayoutMode] = useState<'FOCUS' | 'SPLIT' | 'BLUR_FIT'>('FOCUS');
   const [highlightColor, setHighlightColor] = useState('#FFE600');
   const [captionPosition, setCaptionPosition] = useState<'CENTER' | 'BOTTOM' | 'TOP'>('CENTER');
-  const [fontSize, setFontSize] = useState(24);
+  const [fontSize, setFontSize] = useState(22);
   const [isRendering, setIsRendering] = useState(false);
   const [renderedUrl, setRenderedUrl] = useState<string | null>(null);
   const [copiedCaption, setCopiedCaption] = useState(false);
@@ -56,7 +56,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
 
     if (curr >= trimEnd) {
       videoRef.current.currentTime = trimStart;
-      videoRef.current.play();
+      videoRef.current.play().catch(() => {});
     }
   };
 
@@ -69,7 +69,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
       if (videoRef.current.currentTime < trimStart || videoRef.current.currentTime >= trimEnd) {
         videoRef.current.currentTime = trimStart;
       }
-      videoRef.current.play();
+      videoRef.current.play().catch(() => {});
       setIsPlaying(true);
     }
   };
@@ -77,7 +77,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
   const restartClip = () => {
     if (!videoRef.current) return;
     videoRef.current.currentTime = trimStart;
-    videoRef.current.play();
+    videoRef.current.play().catch(() => {});
     setIsPlaying(true);
   };
 
@@ -196,25 +196,25 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
   };
 
   return (
-    <div className="glass-box p-4 sm:p-8 rounded-3xl border border-white/10 mb-12 relative overflow-hidden">
+    <div className="glass-panel rounded-3xl border border-white/10 mb-12 relative overflow-hidden">
       {/* Studio Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-5 mb-6 border-b border-white/10">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-extrabold uppercase">
-              9:16 Reel Studio
+            <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-extrabold uppercase font-mono">
+              9:16 Reel Studio Editor
             </span>
             <span className="text-xs text-amber-400 font-bold">
               🔥 {clip.viralScore}/100 Virality Score
             </span>
           </div>
-          <h2 className="text-lg sm:text-2xl font-black text-white">{clip.title}</h2>
+          <h2 className="text-lg sm:text-2xl font-extrabold text-white">{clip.title}</h2>
         </div>
 
         <button
           type="button"
           onClick={copyViralPack}
-          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1.5 transition-all cursor-pointer"
+          className="btn-glass text-xs cursor-pointer"
         >
           {copiedCaption ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           <span>{copiedCaption ? 'Copied Post Pack' : 'Copy Post & Hashtags'}</span>
@@ -222,15 +222,15 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LEFT / CENTER: Interactive 9:16 Vertical Phone Simulator (lg:col-span-5) */}
+        {/* LEFT: iPhone 16 Pro 9:16 Vertical Simulator (lg:col-span-5) */}
         <div className="lg:col-span-5 flex flex-col items-center">
-          <div className="reel-device group relative">
-            {/* Phone Top Notch */}
-            <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-20 h-3.5 bg-black rounded-full z-30 flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-[#181a24] ml-auto mr-2" />
+          <div className="iphone-frame group relative">
+            {/* Dynamic Island */}
+            <div className="dynamic-island">
+              <div className="dynamic-island-cam" />
             </div>
 
-            {/* Video Container with Dynamic 9:16 Layout */}
+            {/* Video Container */}
             <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
               {layoutMode === 'BLUR_FIT' && (
                 <video
@@ -259,7 +259,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
 
               {/* Dynamic Animated Karaoke Subtitles */}
               <div
-                className={`absolute left-0 right-0 z-20 px-3 flex justify-center pointer-events-none ${
+                className={`karaoke-captions-wrapper ${
                   captionPosition === 'TOP'
                     ? 'top-14'
                     : captionPosition === 'BOTTOM'
@@ -268,13 +268,13 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                 }`}
               >
                 <div
-                  className="karaoke-box"
+                  className="karaoke-captions-text"
                   style={{ fontSize: `${fontSize}px` }}
                 >
                   {activeCaption.words.map((w, i) => (
                     <span
                       key={i}
-                      className={`karaoke-word ${w.active ? 'highlighted' : ''}`}
+                      className={`karaoke-word-unit ${w.active ? 'active-word' : ''}`}
                       style={{
                         color: w.active ? highlightColor : '#FFFFFF',
                         textShadow: w.active
@@ -288,8 +288,8 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                 </div>
               </div>
 
-              {/* Social Overlay UI (TikTok / Shorts Style) */}
-              <div className="absolute right-2.5 bottom-14 z-20 flex flex-col items-center gap-3.5 pointer-events-auto">
+              {/* Social Overlay UI */}
+              <div className="social-floating-bar">
                 <div className="relative">
                   <div className="w-8 h-8 rounded-full border-2 border-white overflow-hidden bg-purple-600">
                     <img
@@ -303,29 +303,29 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                   </div>
                 </div>
 
-                <div className="social-item">
-                  <div className="social-icon-btn">
+                <div className="social-action-unit">
+                  <div className="social-action-circle">
                     <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
                   </div>
                   <span>142K</span>
                 </div>
 
-                <div className="social-item">
-                  <div className="social-icon-btn">
+                <div className="social-action-unit">
+                  <div className="social-action-circle">
                     <MessageCircle className="w-3.5 h-3.5 text-white" />
                   </div>
                   <span>3.2K</span>
                 </div>
 
-                <div className="social-item">
-                  <div className="social-icon-btn">
+                <div className="social-action-unit">
+                  <div className="social-action-circle">
                     <Bookmark className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                   </div>
                   <span>18K</span>
                 </div>
 
-                <div className="social-item">
-                  <div className="social-icon-btn">
+                <div className="social-action-unit">
+                  <div className="social-action-circle">
                     <Share2 className="w-3.5 h-3.5 text-white" />
                   </div>
                   <span>8.9K</span>
@@ -349,7 +349,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                   onClick={togglePlay}
                   className="absolute inset-0 bg-black/40 flex items-center justify-center z-20 cursor-pointer"
                 >
-                  <div className="w-14 h-14 rounded-full bg-purple-600/90 text-white flex items-center justify-center shadow-xl shadow-purple-600/50 hover:scale-110 transition-transform">
+                  <div className="w-14 h-14 rounded-full bg-purple-600/90 text-white flex items-center justify-center shadow-2xl shadow-purple-600/60 hover:scale-110 transition-transform">
                     <Play className="w-7 h-7 fill-current ml-1" />
                   </div>
                 </div>
@@ -357,7 +357,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
             </div>
           </div>
 
-          {/* Quick Player Bar */}
+          {/* Quick Player Control Bar */}
           <div className="flex items-center gap-3 mt-4">
             <button
               type="button"
@@ -369,7 +369,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
             <button
               type="button"
               onClick={restartClip}
-              title="Restart from beginning of clip"
+              title="Restart clip from beginning"
               className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
@@ -379,7 +379,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
               onClick={() => setIsMuted(!isMuted)}
               className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all cursor-pointer"
             >
-              {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
+              {isMuted ? <VolumeX className="w-4 h-4 text-rose-400" /> : <Volume2 className="w-4 h-4" />}
             </button>
             <span className="text-xs font-mono text-slate-400">
               {formatTime(currentTime)} / {formatTime(trimEnd)}
@@ -387,7 +387,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
           </div>
         </div>
 
-        {/* RIGHT: Customizer Studio Controls (lg:col-span-7) */}
+        {/* RIGHT: Studio Customizer Controls (lg:col-span-7) */}
         <div className="lg:col-span-7 space-y-5">
           {/* 1. Layout Mode Selection */}
           <div className="p-4 sm:p-5 rounded-2xl bg-white/[0.02] border border-white/10">
@@ -399,7 +399,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
               <button
                 type="button"
                 onClick={() => setLayoutMode('FOCUS')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                   layoutMode === 'FOCUS'
                     ? 'bg-purple-600/30 border-purple-500 text-white ring-2 ring-purple-500/40'
                     : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
@@ -412,7 +412,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
               <button
                 type="button"
                 onClick={() => setLayoutMode('SPLIT')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                   layoutMode === 'SPLIT'
                     ? 'bg-purple-600/30 border-purple-500 text-white ring-2 ring-purple-500/40'
                     : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
@@ -425,14 +425,14 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
               <button
                 type="button"
                 onClick={() => setLayoutMode('BLUR_FIT')}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                   layoutMode === 'BLUR_FIT'
                     ? 'bg-purple-600/30 border-purple-500 text-white ring-2 ring-purple-500/40'
                     : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
                 }`}
               >
                 <div className="font-bold text-xs text-white mb-0.5">🎬 Cinematic Blur</div>
-                <div className="text-[10px] text-slate-400">16:9 on blurred 9:16 background</div>
+                <div className="text-[10px] text-slate-400">16:9 on blurred 9:16 backdrop</div>
               </button>
             </div>
           </div>
@@ -447,7 +447,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
             {/* Colors */}
             <div className="mb-4">
               <span className="text-[11px] text-slate-400 block mb-2 font-medium">Highlight Color</span>
-              <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap">
                 {[
                   { name: 'Cyber Yellow', code: '#FFE600' },
                   { name: 'Neon Green', code: '#22C55E' },
@@ -462,7 +462,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                     title={c.name}
                     className={`w-8 h-8 rounded-full border-2 transition-transform cursor-pointer ${
                       highlightColor === c.code
-                        ? 'scale-120 border-white ring-2 ring-purple-500'
+                        ? 'scale-125 border-white ring-2 ring-purple-500'
                         : 'border-transparent opacity-80 hover:opacity-100'
                     }`}
                     style={{ backgroundColor: c.code }}
@@ -481,7 +481,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                       key={pos}
                       type="button"
                       onClick={() => setCaptionPosition(pos)}
-                      className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                      className={`flex-1 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                         captionPosition === pos
                           ? 'bg-purple-600 border-purple-500 text-white'
                           : 'bg-white/5 border-white/10 text-slate-400'
@@ -500,7 +500,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                 <input
                   type="range"
                   min="16"
-                  max="36"
+                  max="32"
                   value={fontSize}
                   onChange={(e) => setFontSize(Number(e.target.value))}
                   className="w-full accent-purple-500 cursor-pointer"
@@ -533,7 +533,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                     setTrimStart(val);
                     onUpdateClipTimes(clip.id, val, trimEnd);
                   }}
-                  className="w-full py-2 px-3 bg-[#0d101d] border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 bg-[#0a0d16] border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
 
@@ -548,7 +548,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
                     setTrimEnd(val);
                     onUpdateClipTimes(clip.id, trimStart, val);
                   }}
-                  className="w-full py-2 px-3 bg-[#0d101d] border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-purple-500"
+                  className="w-full py-2 px-3 bg-[#0a0d16] border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-purple-500"
                 />
               </div>
             </div>
@@ -560,7 +560,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
               type="button"
               onClick={handleExport}
               disabled={isRendering}
-              className="btn-glow flex-1 py-3.5 sm:py-4 text-xs sm:text-sm font-extrabold cursor-pointer"
+              className="btn-glow-primary flex-1 py-4 text-xs sm:text-sm font-extrabold cursor-pointer"
             >
               {isRendering ? (
                 <>
@@ -578,7 +578,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
             <button
               type="button"
               onClick={downloadSrt}
-              className="py-3.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-slate-200 hover:text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              className="btn-glass py-4 px-5 text-xs font-bold cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Download .SRT</span>
@@ -587,7 +587,7 @@ export const ReelStudio: React.FC<ReelStudioProps> = ({
 
           {/* Render Success Card */}
           {renderedUrl && (
-            <div className="p-4 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-4 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xl">
               <div className="flex items-center gap-3">
                 <Check className="w-5 h-5 text-emerald-400 shrink-0" />
                 <div>

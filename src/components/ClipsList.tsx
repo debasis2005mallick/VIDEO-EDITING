@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Flame, Clock, Copy, Check, Scissors, Quote, Sparkles } from 'lucide-react';
-
+import { Flame, Clock, Copy, Check, Scissors, Quote, Sparkles, ArrowRight } from 'lucide-react';
 import { formatTime } from '../utils/formatTime';
 
 export interface ViralClip {
@@ -50,12 +49,12 @@ export const ClipsList: React.FC<ClipsListProps> = ({
             </h2>
           </div>
           <p className="text-xs text-slate-400">
-            Selected from deep context analysis based on 3-second hook strength and viral retention curve
+            Selected from deep context analysis based on 3-second hook strength, storytelling arc, and viral retention index
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {clips.map((clip) => {
           const isSelected = selectedClipId === clip.id;
           const isEpic = clip.viralScore >= 95;
@@ -64,37 +63,31 @@ export const ClipsList: React.FC<ClipsListProps> = ({
             <div
               key={clip.id}
               onClick={() => onSelectClip(clip)}
-              className={`glass-box p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${
+              className={`glass-panel p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between group ${
                 isSelected
-                  ? 'bg-purple-950/50 border-purple-500 ring-2 ring-purple-500/40 shadow-xl shadow-purple-500/20'
-                  : 'hover:border-purple-500/40 hover:bg-white/[0.06]'
+                  ? 'bg-purple-950/60 border-purple-500 ring-2 ring-purple-500/40 shadow-2xl shadow-purple-500/20'
+                  : 'hover:border-purple-500/40 hover:bg-white/[0.05]'
               }`}
             >
-              {/* Card Top: Virality Score & Category */}
+              {/* Card Header: Virality Score & Category */}
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider ${
-                      isEpic
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
-                        : 'bg-amber-500/15 text-amber-300 border border-amber-500/40'
-                    }`}
-                  >
+                  <span className={`virality-pill ${isEpic ? 'epic' : 'high'}`}>
                     <Flame className="w-3.5 h-3.5 fill-current" />
                     <span>{clip.viralScore}/100 Virality</span>
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 bg-purple-950/70 border border-purple-500/30 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-300 bg-purple-950/70 border border-purple-500/30 px-2.5 py-0.5 rounded-full">
                     {clip.category}
                   </span>
                 </div>
 
                 {/* Title */}
-                <h3 className="text-sm sm:text-base font-bold text-white mb-2 group-hover:text-purple-300 transition-colors leading-snug">
+                <h3 className="text-sm sm:text-base font-bold text-white mb-2.5 group-hover:text-purple-300 transition-colors leading-snug">
                   {clip.title}
                 </h3>
 
-                {/* Hook preview */}
-                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 mb-3 text-xs text-slate-300 leading-relaxed">
+                {/* 3s Hook preview */}
+                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 mb-3 text-xs text-slate-300 leading-relaxed">
                   <span className="text-purple-400 font-bold block text-[10px] uppercase tracking-wider mb-1">
                     ⚡ 3s Opening Hook
                   </span>
@@ -110,14 +103,14 @@ export const ClipsList: React.FC<ClipsListProps> = ({
                 )}
               </div>
 
-              {/* Card Bottom: Duration & Open Studio */}
+              {/* Card Footer: Duration & Open Studio */}
               <div>
                 <div className="flex items-center justify-between text-xs text-slate-400 border-t border-white/10 pt-3 mb-3 font-mono">
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                     <span>{clip.duration.toFixed(1)}s Reel</span>
                   </span>
-                  <span className="text-slate-300 bg-white/5 px-2 py-0.5 rounded">
+                  <span className="text-slate-300 bg-white/5 px-2.5 py-0.5 rounded-md">
                     {formatTime(clip.startTime)} ➔ {formatTime(clip.endTime)}
                   </span>
                 </div>
